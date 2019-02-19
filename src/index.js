@@ -4,7 +4,8 @@ import isURL from 'validator/lib/isURL';
 import axios from 'axios';
 
 const { watch } = WatchJS;
-const cors = 'https://cors-anywhere.herokuapp.com/';
+const corsProxy = 'https://cors-anywhere.herokuapp.com/';
+const parser = new DOMParser();
 
 
 const app = () => {
@@ -34,7 +35,6 @@ const app = () => {
         state.error = err;
         return;
       }
-      const parser = new DOMParser();
       const doc = parser.parseFromString(value, 'application/xml');
       if (doc.querySelector('parsererror')) {
         state.error = 'parse error';
@@ -45,7 +45,7 @@ const app = () => {
       state.inputValue = '';
       state.xmlDocument = doc;
     };
-    axios.get(`${cors}${state.inputValue}`)
+    axios.get(`${corsProxy}${state.inputValue}`)
       .then(({ data }) => changeState(data))
       .catch(({ response: { statusText, status } }) => changeState(null, `${status} ${statusText}`));
   });
