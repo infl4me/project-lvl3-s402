@@ -2,20 +2,23 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import WatchJS from 'melanke-watchjs';
 import isURL from 'validator/lib/isURL';
 import axios from 'axios';
+import createFeedItem from './feed';
 
 const { watch } = WatchJS;
 const corsProxy = 'https://cors-anywhere.herokuapp.com/';
 const parser = new DOMParser();
-
 
 const app = () => {
   const state = {
     inputValue: '',
     form: 'init',
     loading: false,
-    xmlDocument: null,
+    xml: null,
     existingFeeds: new Set(),
-    error: null,
+    errors: {
+      count: 0,
+      message: '',
+    },
   };
 
   const form = document.querySelector('.needs-validation');
@@ -29,82 +32,58 @@ const app = () => {
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     state.loading = true;
+
     const changeState = (value, err) => {
       state.loading = false;
       if (err) {
-        state.error = err;
+        state.errors.count += 1;
+        state.errors.message = err;
         return;
       }
       const doc = parser.parseFromString(value, 'application/xml');
       if (doc.querySelector('parsererror')) {
-        state.error = 'parse error';
+        state.errors.count += 1;
+        state.errors.message = 'parse error';
         return;
       }
       state.existingFeeds.add(state.inputValue);
       state.form = 'init';
       state.inputValue = '';
-      state.xmlDocument = doc;
+      state.xml = doc;
     };
-    axios.get(`${corsProxy}${state.inputValue}`)
+
+    axios.get(`${corsProxy}${state.inputValue}`, { timeout: 30000 })
       .then(({ data }) => changeState(data))
-      .catch(({ response: { statusText, status } }) => changeState(null, `${status} ${statusText}`));
+      .catch(({ message }) => changeState(null, `${message}`));
   });
 
-  watch(state, 'error', () => {
+  watch(state, 'errors', () => {
     const alert = document.querySelector('.alert-danger');
-    alert.textContent = state.error;
+    const { message } = state.errors;
+    alert.textContent = message;
     alert.classList.add('show');
     setTimeout(() => {
       alert.classList.remove('show');
       alert.textContent = '';
-    }, 5000);
+    }, 3000);
   });
 
   watch(state, 'loading', () => {
     if (state.loading) {
       button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
       Loading...`;
+      button.disabled = true;
     } else {
       button.innerHTML = 'Submit';
+      button.disabled = false;
     }
   });
 
-  const container = document.querySelector('.feeds-list');
-  watch(state, 'xmlDocument', () => {
-    const div = document.createElement('div');
-    div.classList.add('feed', 'mt-5');
-    const ul = document.createElement('ul');
-    ul.classList.add('list-group');
-    const header = document.createElement('h2');
-    const p = document.createElement('p');
-    const doc = state.xmlDocument;
-    const channel = doc.querySelector('channel');
-    [...channel.children].forEach((child) => {
-      if (child.nodeName === 'title') {
-        header.textContent = child.textContent;
-      }
-      if (child.nodeName === 'description') {
-        p.textContent = child.textContent;
-      }
-    });
-    container.append(div);
-    div.append(header);
-    div.append(p);
-    div.append(ul);
-    doc.querySelectorAll('item').forEach((item) => {
-      const li = document.createElement('li');
-      const a = document.createElement('a');
-      [...item.children].forEach((child) => {
-        if (child.nodeName === 'title') {
-          a.textContent = child.textContent;
-        }
-        if (child.nodeName === 'link') {
-          a.href = child.textContent;
-        }
-      });
-      li.append(a);
-      ul.append(li);
-    });
+  const feeds = document.querySelector('.feeds');
+
+  watch(state, 'xml', () => {
+    const feed = createFeedItem(state.xml);
+    feeds.prepend(feed);
   });
 
   watch(state, 'inputValue', () => {
@@ -116,17 +95,18 @@ const app = () => {
       input.setCustomValidity('invalid');
     }
   });
+
+  const formStateActions = {
+    init: () => {
+      form.classList.remove('was-validated');
+      input.value = '';
+    },
+    process: () => {
+      form.classList.add('was-validated');
+    },
+  };
   watch(state, 'form', () => {
-    const map = {
-      init: () => {
-        form.classList.remove('was-validated');
-        input.value = '';
-      },
-      process: () => {
-        form.classList.add('was-validated');
-      },
-    };
-    map[state.form]();
+    formStateActions[state.form]();
   });
 };
 
