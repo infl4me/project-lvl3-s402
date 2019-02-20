@@ -36,13 +36,13 @@ const app = () => {
     const changeState = (value, err) => {
       state.loading = false;
       if (err) {
-        state.errors.count += 1;
+        state.errors.counter += 1;
         state.errors.message = err;
         return;
       }
       const doc = parser.parseFromString(value, 'application/xml');
       if (doc.querySelector('parsererror')) {
-        state.errors.count += 1;
+        state.errors.counter += 1;
         state.errors.message = 'parse error';
         return;
       }
@@ -60,9 +60,9 @@ const app = () => {
       .catch(({ message }) => changeState(null, `${message}`));
   });
 
-  const checkUpdate = (url1) => {
-    const loop = (url) => {
-      axios.get(corsProxy + url, { timeout: 30000 })
+  const checkUpdate = (url) => {
+    const loop = () => {
+      axios.get(`${corsProxy}${url}`, { timeout: 30000 })
         .then((res) => {
           const { data } = res;
           const doc = parser.parseFromString(data, 'application/xml');
@@ -96,7 +96,7 @@ const app = () => {
           setTimeout(() => loop(url), 5000);
         });
     };
-    setTimeout(() => loop(url1), 5000);
+    setTimeout(loop, 5000);
   };
 
   watch(state, 'errors', () => {
