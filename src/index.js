@@ -93,7 +93,7 @@ const app = () => {
             fillList(articles, newArticles.reverse(), 'prepend');
           }
           state.feeds[url].pubDate = newPubDate;
-          setTimeout(() => loop(url), 5000);
+          setTimeout(loop, 5000);
         });
     };
     setTimeout(loop, 5000);
