@@ -7,29 +7,8 @@ const descBtnHandler = (event) => {
   $('#myModal').modal();
 };
 
-const createFeedItem = (doc) => {
-  const feed = document.createElement('div');
-  feed.classList.add('feed', 'mt-5');
-
-  const feedHeading = document.createElement('h2');
-  const feedDesc = document.createElement('p');
-
-  const articles = document.createElement('ul');
-  articles.classList.add('list-goup', 'articles');
-
-  const channel = doc.querySelector('channel');
-
-  const actions = {
-    title: feedHeading,
-    description: feedDesc,
-  };
-  [...channel.children].forEach((child) => {
-    if (actions[child.nodeName]) {
-      actions[child.nodeName].textContent = child.textContent;
-    }
-  });
-
-  doc.querySelectorAll('item').forEach((item) => {
+export const fillList = (articles, items, position = 'append') => {
+  items.forEach((item) => {
     const article = document.createElement('li');
     article.classList.add('list-group-item', 'mb-2');
 
@@ -54,12 +33,39 @@ const createFeedItem = (doc) => {
         element[property] = child.textContent;
       }
     });
-    articles.append(article);
+    articles[position](article);
 
     article.append(link);
     article.append(description);
     article.append(button);
   });
+};
+
+const createFeedItem = (doc) => {
+  const feed = document.createElement('div');
+  feed.classList.add('feed', 'mt-5');
+
+  const feedHeading = document.createElement('h2');
+  const feedDesc = document.createElement('p');
+
+  const articles = document.createElement('ul');
+  articles.classList.add('list-goup', 'articles');
+
+  const channel = doc.querySelector('channel');
+
+  const actions = {
+    title: feedHeading,
+    description: feedDesc,
+  };
+  [...channel.children].forEach((child) => {
+    if (actions[child.nodeName]) {
+      actions[child.nodeName].textContent = child.textContent;
+    }
+  });
+
+  const items = doc.querySelectorAll('item');
+  fillList(articles, items);
+
   feed.append(feedHeading);
   feed.append(feedDesc);
   feed.append(articles);

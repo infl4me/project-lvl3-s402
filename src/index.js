@@ -2,7 +2,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import WatchJS from 'melanke-watchjs';
 import isURL from 'validator/lib/isURL';
 import axios from 'axios';
-import createFeedItem from './feed';
+import createFeedItem, { fillList } from './feed';
 
 const { watch } = WatchJS;
 const corsProxy = 'https://cors-anywhere.herokuapp.com/';
@@ -13,12 +13,12 @@ const app = () => {
     inputValue: '',
     form: 'init',
     loading: false,
-    xml: null,
-    existingFeeds: new Set(),
+    feeds: {},
     errors: {
-      count: 0,
+      counter: 0,
       message: '',
     },
+    currentUrl: '',
   };
 
   const form = document.querySelector('.needs-validation');
@@ -46,16 +46,58 @@ const app = () => {
         state.errors.message = 'parse error';
         return;
       }
-      state.existingFeeds.add(state.inputValue);
+      const pubDate = doc.querySelector('item').querySelector('pubDate').textContent;
+      const url = state.inputValue;
+      state.feeds[url] = { pubDate };
       state.form = 'init';
       state.inputValue = '';
-      state.xml = doc;
+      state.feeds[url].xml = doc;
+      state.currentUrl = url;
     };
-
-    axios.get(`${corsProxy}${state.inputValue}`, { timeout: 30000 })
+    const url = `${corsProxy}${state.inputValue}`;
+    axios.get(url, { timeout: 30000 })
       .then(({ data }) => changeState(data))
       .catch(({ message }) => changeState(null, `${message}`));
   });
+
+  const checkUpdate = (url1) => {
+    const loop = (url) => {
+      axios.get(corsProxy + url, { timeout: 30000 })
+        .then((res) => {
+          const { data } = res;
+          const doc = parser.parseFromString(data, 'application/xml');
+          const item = doc.querySelector('item');
+          const newPubDate = item.querySelector('pubDate').textContent;
+          const { pubDate } = state.feeds[url];
+          if (pubDate === newPubDate) {
+            setTimeout(() => loop(url), 5000);
+            return;
+          }
+          const newArticles = [item];
+          let current = item;
+          while (true) {
+            current = current.nextElementSibling;
+            if (current && current.matches('item')) {
+              const currentPubDate = current.querySelector('pubDate').textContent;
+              if (currentPubDate === pubDate) {
+                break;
+              }
+              newArticles.push(current);
+            } else {
+              break;
+            }
+          }
+          if (newArticles.length > 0) {
+            const feed = document.querySelector(`[data-url="${url}"]`);
+            const articles = feed.querySelector('.articles');
+            fillList(articles, newArticles.reverse(), 'prepend');
+          }
+          state.feeds[url].pubDate = newPubDate;
+          setTimeout(() => loop(url), 5000);
+        });
+    };
+    setTimeout(() => loop(url1), 5000);
+  };
 
   watch(state, 'errors', () => {
     const alert = document.querySelector('.alert-danger');
@@ -81,13 +123,16 @@ const app = () => {
 
   const feeds = document.querySelector('.feeds');
 
-  watch(state, 'xml', () => {
-    const feed = createFeedItem(state.xml);
+  watch(state, 'currentUrl', () => {
+    const url = state.currentUrl;
+    const feed = createFeedItem(state.feeds[url].xml);
+    feed.setAttribute('data-url', url);
     feeds.prepend(feed);
+    checkUpdate(state.currentUrl);
   });
 
   watch(state, 'inputValue', () => {
-    if (isURL(state.inputValue) && !state.existingFeeds.has(state.inputValue)) {
+    if (isURL(state.inputValue) && !state.feeds[state.inputValue]) {
       button.disabled = false;
       input.setCustomValidity('');
     } else {
