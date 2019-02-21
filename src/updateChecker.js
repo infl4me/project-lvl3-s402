@@ -15,7 +15,8 @@ export default (url, pubDate, feed) => {
         const { data, status, statusText } = res;
         const doc = parse(data);
         const items = [...doc.querySelectorAll('item')];
-        const oldArticleIndex = items.findIndex(item => item.querySelector('pubDate').textContent === oldPubDate);
+        const index = items.findIndex(item => item.querySelector('pubDate').textContent === oldPubDate);
+        const oldArticleIndex = index === -1 ? items.length : index;
         console.log('---------------------------------------------------------------------------------------------');
         console.log(oldArticleIndex, 'oldArticleIndex');
         const newArticles = items.slice(0, oldArticleIndex);
