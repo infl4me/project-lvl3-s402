@@ -1,22 +1,17 @@
 ---
-
 plugins:
-  - jest
   - babel
+  - jquery
 
 env:
   node: true
-  jest/globals: true
   browser: true
+  jquery: true
 
 parser: babel-eslint
 
 extends:
   - 'airbnb-base'
-  - 'plugin:jest/recommended'
 
 # rules:
   # no-console: 0
-
-globals:
-  $: true

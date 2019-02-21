@@ -1,8 +1,11 @@
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const webpack = require('webpack');
 
+const isDev = process.env.NODE_ENV !== 'production';
+
 module.exports = {
-  mode: process.env.NODE_ENV || 'development',
+  mode: isDev ? 'development' : 'production',
   module: {
     rules: [
       {
@@ -14,16 +17,35 @@ module.exports = {
       },
       {
         test: /\.css$/,
-        use: ['style-loader', 'css-loader'],
+        use: [isDev ? 'style-loader' : MiniCssExtractPlugin.loader, 'css-loader'],
       },
     ],
   },
+
   plugins: [
     new HtmlWebpackPlugin({
       template: 'index.html',
+    }),
+    new MiniCssExtractPlugin({
+      filename: isDev ? 'css/[name].css' : 'css/[name].[contenthash].css',
     }),
     new webpack.ProvidePlugin({
       $: 'jquery',
     }),
   ],
+
+  optimization: {
+    runtimeChunk: true,
+    splitChunks: {
+      cacheGroups: {
+        vendor: {
+          test: /node_modules/,
+          chunks: 'initial',
+          name: 'vendor',
+          priority: 10,
+          enforce: true,
+        },
+      },
+    },
+  },
 };

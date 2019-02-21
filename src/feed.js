@@ -8,11 +8,14 @@ const descBtnHandler = (event) => {
 };
 
 export const fillList = (articles, items, position = 'append') => {
+  console.log(items.length, 'ITEMS ADDED');
+  console.log('---------------------------------------------------------------------------------------------');
   items.forEach((item) => {
     const article = document.createElement('li');
     article.classList.add('list-group-item', 'mb-2');
 
     const link = document.createElement('a');
+    link.setAttribute('target', '_blank');
 
     const description = document.createElement('div');
     description.classList.add('desc', 'd-none');
@@ -27,12 +30,14 @@ export const fillList = (articles, items, position = 'append') => {
       link: [link, 'href'],
       description: [description, 'textContent'],
     };
-    [...item.children].forEach((child) => {
-      if (map[child.nodeName]) {
-        const [element, property] = map[child.nodeName];
-        element[property] = child.textContent;
-      }
-    });
+    [...item.children]
+      .filter(({ nodeName }) => map[nodeName] !== undefined)
+      .forEach(({ nodeName, textContent }) => {
+        if (map[nodeName]) {
+          const [element, property] = map[nodeName];
+          element[property] = textContent;
+        }
+      });
     articles[position](article);
 
     article.append(link);
@@ -53,15 +58,15 @@ const createFeedItem = (doc) => {
 
   const channel = doc.querySelector('channel');
 
-  const actions = {
+  const map = {
     title: feedHeading,
     description: feedDesc,
   };
-  [...channel.children].forEach((child) => {
-    if (actions[child.nodeName]) {
-      actions[child.nodeName].textContent = child.textContent;
-    }
-  });
+  [...channel.children]
+    .filter(({ nodeName }) => map[nodeName] !== undefined)
+    .forEach(({ nodeName, textContent }) => {
+      map[nodeName].textContent = textContent;
+    });
 
   const items = doc.querySelectorAll('item');
   fillList(articles, items);

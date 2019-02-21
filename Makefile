@@ -14,9 +14,6 @@ test:
 lint:
 	npx eslint .
 
-publish:
-	npm publish
-
 deploy: build
 	surge ./dist rssreader.surge.sh
 

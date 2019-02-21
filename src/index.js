@@ -2,11 +2,12 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import WatchJS from 'melanke-watchjs';
 import isURL from 'validator/lib/isURL';
 import axios from 'axios';
-import createFeedItem, { fillList } from './feed';
+import parse from './xmlParser';
+import checkUpdate from './updateChecker';
+import createFeedItem from './feed';
 
 const { watch } = WatchJS;
 const corsProxy = 'https://cors-anywhere.herokuapp.com/';
-const parser = new DOMParser();
 
 const app = () => {
   const state = {
@@ -40,12 +41,7 @@ const app = () => {
         state.errors.message = err;
         return;
       }
-      const doc = parser.parseFromString(value, 'application/xml');
-      if (doc.querySelector('parsererror')) {
-        state.errors.counter += 1;
-        state.errors.message = 'parse error';
-        return;
-      }
+      const doc = parse(value);
       const pubDate = doc.querySelector('item').querySelector('pubDate').textContent;
       const url = state.inputValue;
       state.feeds[url] = { pubDate };
@@ -59,45 +55,6 @@ const app = () => {
       .then(({ data }) => changeState(data))
       .catch(({ message }) => changeState(null, `${message}`));
   });
-
-  const checkUpdate = (url) => {
-    const loop = () => {
-      axios.get(`${corsProxy}${url}`, { timeout: 30000 })
-        .then((res) => {
-          const { data } = res;
-          const doc = parser.parseFromString(data, 'application/xml');
-          const item = doc.querySelector('item');
-          const newPubDate = item.querySelector('pubDate').textContent;
-          const { pubDate } = state.feeds[url];
-          if (pubDate === newPubDate) {
-            setTimeout(() => loop(url), 5000);
-            return;
-          }
-          const newArticles = [item];
-          let current = item;
-          while (true) {
-            current = current.nextElementSibling;
-            if (current && current.matches('item')) {
-              const currentPubDate = current.querySelector('pubDate').textContent;
-              if (currentPubDate === pubDate) {
-                break;
-              }
-              newArticles.push(current);
-            } else {
-              break;
-            }
-          }
-          if (newArticles.length > 0) {
-            const feed = document.querySelector(`[data-url="${url}"]`);
-            const articles = feed.querySelector('.articles');
-            fillList(articles, newArticles.reverse(), 'prepend');
-          }
-          state.feeds[url].pubDate = newPubDate;
-          setTimeout(loop, 5000);
-        });
-    };
-    setTimeout(loop, 5000);
-  };
 
   watch(state, 'errors', () => {
     const alert = document.querySelector('.alert-danger');
@@ -126,9 +83,8 @@ const app = () => {
   watch(state, 'currentUrl', () => {
     const url = state.currentUrl;
     const feed = createFeedItem(state.feeds[url].xml);
-    feed.setAttribute('data-url', url);
     feeds.prepend(feed);
-    checkUpdate(state.currentUrl);
+    checkUpdate(url, state.feeds[url].pubDate, feed);
   });
 
   watch(state, 'inputValue', () => {
