@@ -1,12 +1,10 @@
 ---
 plugins:
   - babel
-  - jquery
 
 env:
   node: true
   browser: true
-  jquery: true
 
 parser: babel-eslint
 

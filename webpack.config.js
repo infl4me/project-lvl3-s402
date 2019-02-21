@@ -1,6 +1,5 @@
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-const webpack = require('webpack');
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -28,9 +27,6 @@ module.exports = {
     }),
     new MiniCssExtractPlugin({
       filename: isDev ? 'css/[name].css' : 'css/[name].[contenthash].css',
-    }),
-    new webpack.ProvidePlugin({
-      $: 'jquery',
     }),
   ],
 

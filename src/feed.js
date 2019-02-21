@@ -1,3 +1,4 @@
+import $ from 'jquery';
 import 'bootstrap/js/dist/modal';
 
 const descBtnHandler = (event) => {
