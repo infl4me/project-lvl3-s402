@@ -33,10 +33,8 @@ export const fillList = (articles, items, position = 'append') => {
     [...item.children]
       .filter(({ nodeName }) => map[nodeName] !== undefined)
       .forEach(({ nodeName, textContent }) => {
-        if (map[nodeName]) {
-          const [element, property] = map[nodeName];
-          element[property] = textContent;
-        }
+        const [element, property] = map[nodeName];
+        element[property] = textContent;
       });
     articles[position](article);
 
