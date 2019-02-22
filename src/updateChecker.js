@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { format } from 'date-fns';
-import parse from './xmlParser';
+import parse, { getPubDate } from './xmlParser';
 import { fillList } from './feed';
 
 const corsProxy = 'https://cors-anywhere.herokuapp.com/';
@@ -15,7 +15,7 @@ export default (url, pubDate, feed) => {
         const { data, status, statusText } = res;
         const doc = parse(data);
         const items = [...doc.querySelectorAll('item')];
-        const index = items.findIndex(item => item.querySelector('pubDate').textContent === oldPubDate);
+        const index = items.findIndex(item => getPubDate(item) === oldPubDate);
         const oldArticleIndex = index === -1 ? items.length : index;
         console.log('---------------------------------------------------------------------------------------------');
         console.log(oldArticleIndex, 'oldArticleIndex');
@@ -25,7 +25,7 @@ export default (url, pubDate, feed) => {
         });
         console.log(url, '<<<>>>', format(new Date(), 'HH:mm:ss'), '<<<>>>', status, statusText, '<<<>>>', `length ${newArticles.length}`);
         if (newArticles.length > 0) {
-          const newPubDate = newArticles[0].querySelector('pubDate').textContent;
+          const newPubDate = getPubDate(newArticles[0]);
           fillList(articles, newArticles.reverse(), 'prepend'); // Careful: reverse is destructive. It also changes the original array...
           oldPubDate = newPubDate;
         }
