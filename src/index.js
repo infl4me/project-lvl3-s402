@@ -3,9 +3,8 @@ import WatchJS from 'melanke-watchjs';
 import isURL from 'validator/lib/isURL';
 import axios from 'axios';
 import { format } from 'date-fns';
-import parse, { getPubDate } from './xmlParser';
+import parse, { getPubDate, getArticles } from './xmlParser';
 import createFeedItem, { fillList } from './feed';
-// import checkUpdate from './updateChecker';
 
 const { watch } = WatchJS;
 const corsProxy = 'https://cors-anywhere.herokuapp.com/';
@@ -34,6 +33,7 @@ const app = () => {
   });
 
   const checkUpdate = (url) => {
+    state.updatedXml[url] = {};
     const proxyUrl = `${corsProxy}${url}`;
 
     const loop = () => {
@@ -60,15 +60,14 @@ const app = () => {
   };
 
   form.addEventListener('submit', (e) => {
-    console.log(format(new Date(), 'HH:mm:ss'));
     e.preventDefault();
     state.loading = true;
 
     const changeState = (value, err) => {
       state.loading = false;
       if (err) {
-        state.errors.counter += 1;
         state.errors.message = err;
+        state.errors.counter += 1;
         return;
       }
       const doc = parse(value);
@@ -87,7 +86,7 @@ const app = () => {
       .catch(({ message }) => changeState(null, `${message}`));
   });
 
-  watch(state, 'errors', () => {
+  watch(state.errors, 'counter', () => {
     const alert = document.querySelector('.alert-danger');
     const { message } = state.errors;
     alert.textContent = message;
@@ -116,16 +115,12 @@ const app = () => {
     const feed = createFeedItem(state.feeds[url].xml);
     feed.setAttribute('data-url', url);
     feeds.prepend(feed);
-    // checkUpdate(url, state.feeds[url].pubDate, feed);
   });
 
   watch(state.updatedXml, (url) => {
-    // console.log(typeof url, '!!!!!!!')
     if (url === 'root') return;
-    const { xml, oldPubDate } = state.updatedXml[url];
-    console.log('update for ' + url);
-    console.log(state.updatedXml);
-    const items = [...xml.querySelectorAll('item')];
+    const { oldPubDate, xml } = state.updatedXml[url];
+    const items = getArticles(xml);
     const articles = document.querySelector(`[data-url="${url}"]`).querySelector('.articles');
     const index = items.findIndex(item => getPubDate(item) === oldPubDate);
     const oldArticleIndex = index === -1 ? items.length : index;
@@ -136,7 +131,7 @@ const app = () => {
     });
     console.log(url, '<<<>>>', oldPubDate, '<<<>>>', `length ${newArticles.length}`);
     fillList(articles, newArticles.reverse(), 'prepend'); // Careful: reverse is destructive. It also changes the original array...
-  }, 10, true);
+  }, 1, true);
 
   watch(state, 'inputValue', () => {
     if (isURL(state.inputValue) && !state.feeds[state.inputValue]) {

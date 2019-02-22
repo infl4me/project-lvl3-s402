@@ -1,5 +1,7 @@
 const parser = new DOMParser();
 
+export const getArticles = xml => [...xml.querySelectorAll('item')];
+
 export const getPubDate = (element) => {
   const item = element.nodeName === '#document' ? element.querySelector('item') : element;
   if (!item) {
