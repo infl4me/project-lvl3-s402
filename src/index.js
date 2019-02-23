@@ -6,7 +6,7 @@ import axios from 'axios';
 import { format, isAfter } from 'date-fns';
 import parse from './xmlParser';
 import createFeedItem, { fillList } from './feed';
-import testArticles from './testArticles';
+// import testArticles from './testArticles';
 
 const { watch } = WatchJS;
 const corsProxy = 'https://cors-anywhere.herokuapp.com/';
@@ -16,7 +16,6 @@ const app = () => {
   const state = {
     inputValue: '',
     form: 'init',
-    loading: false,
     feeds: [],
     errors: {
       counter: 0,
@@ -161,7 +160,7 @@ const app = () => {
   watch(state, 'form', () => {
     formStateActions[state.form]();
   });
-  setInterval(testArticles, 5000);
+  // setInterval(testArticles, 5000);
 };
 
 app();
