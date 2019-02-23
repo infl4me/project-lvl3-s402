@@ -11,64 +11,46 @@ const descBtnHandler = (event) => {
 export const fillList = (articles, items, position = 'append') => {
   console.log(items.length, 'ITEMS ADDED');
   console.log('---------------------------------------------------------------------------------------------');
-  items.forEach((item) => {
+  items.forEach(({ title, link: href, description }) => {
     const article = document.createElement('li');
     article.classList.add('list-group-item', 'mb-2');
 
     const link = document.createElement('a');
     link.setAttribute('target', '_blank');
+    link.textContent = title;
+    link.href = href;
 
-    const description = document.createElement('div');
-    description.classList.add('desc', 'd-none');
+    const descriptionContainer = document.createElement('div');
+    descriptionContainer.classList.add('desc', 'd-none');
+    descriptionContainer.textContent = description;
 
     const button = document.createElement('button');
     button.textContent = 'desc';
     button.classList.add('btn', 'btn-primary', 'btn-sm', 'ml-2');
     button.addEventListener('click', descBtnHandler);
 
-    const map = {
-      title: [link, 'textContent'],
-      link: [link, 'href'],
-      description: [description, 'textContent'],
-    };
-    [...item.children]
-      .filter(({ nodeName }) => map[nodeName] !== undefined)
-      .forEach(({ nodeName, textContent }) => {
-        const [element, property] = map[nodeName];
-        element[property] = textContent;
-      });
     articles[position](article);
 
     article.append(link);
-    article.append(description);
+    article.append(descriptionContainer);
     article.append(button);
   });
 };
 
-const createFeedItem = (doc) => {
+const createFeedItem = (data) => {
   const feed = document.createElement('div');
   feed.classList.add('feed', 'mt-5');
 
   const feedHeading = document.createElement('h2');
+  feedHeading.textContent = data.title;
+
   const feedDesc = document.createElement('p');
+  feedDesc.textContent = data.description;
 
   const articles = document.createElement('ul');
   articles.classList.add('list-goup', 'articles');
 
-  const channel = doc.querySelector('channel');
-
-  const map = {
-    title: feedHeading,
-    description: feedDesc,
-  };
-  [...channel.children]
-    .filter(({ nodeName }) => map[nodeName] !== undefined)
-    .forEach(({ nodeName, textContent }) => {
-      map[nodeName].textContent = textContent;
-    });
-
-  const items = doc.querySelectorAll('item');
-  fillList(articles, items);
+  fillList(articles, data.articles);
 
   feed.append(feedHeading);
   feed.append(feedDesc);

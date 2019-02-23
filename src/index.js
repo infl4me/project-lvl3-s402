@@ -2,9 +2,10 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import WatchJS from 'melanke-watchjs';
 import isURL from 'validator/lib/isURL';
 import axios from 'axios';
-import { format } from 'date-fns';
-import parse, { getPubDate, getArticles } from './xmlParser';
+import { format, isAfter } from 'date-fns';
+import parse from './xmlParser';
 import createFeedItem, { fillList } from './feed';
+// import testArticles from './testArticles';
 
 const { watch } = WatchJS;
 const corsProxy = 'https://cors-anywhere.herokuapp.com/';
@@ -15,43 +16,44 @@ const app = () => {
     inputValue: '',
     form: 'init',
     loading: false,
-    feeds: {},
-    updatedXml: {},
+    feeds: [],
     errors: {
       counter: 0,
       message: '',
     },
-    currentUrl: '',
   };
 
   const form = document.querySelector('.needs-validation');
   const input = document.getElementById('address');
   const button = document.querySelector('[type="submit"]');
+
   input.addEventListener('input', ({ target }) => {
     state.form = target.value === '' ? 'init' : 'process';
     state.inputValue = target.value;
   });
 
-  const checkUpdate = (url) => {
-    state.updatedXml[url] = {};
+  const checkUpdate = (url, index) => {
     const proxyUrl = `${corsProxy}${url}`;
 
     const loop = () => {
       axios.get(proxyUrl)
-        .then(({ data }) => {
-          const xml = parse(data);
-          const newPubDate = getPubDate(xml);
-          const oldPubDate = state.feeds[url].pubDate;
+        .then((res) => {
           console.log('---------------------------------------------------------------------------------------------');
           console.log(url, '<<<>>>', format(new Date(), 'HH:mm:ss'));
-          if (newPubDate !== oldPubDate) {
-            console.log('UPDATED!');
-            state.updatedXml[url] = { xml, oldPubDate };
-            state.feeds[url].pubDate = newPubDate;
-          } else {
-            console.log('NOT UPDATED');
+          const { pubDate: newPubDate, articles } = parse(res.data);
+          const oldPubDate = state.feeds[index].pubDate;
+          if (!isAfter(newPubDate, oldPubDate)) {
+            console.log('NOT UPDATED!');
             console.log('---------------------------------------------------------------------------------------------');
+            return;
           }
+          console.log('UPDATED!');
+          const newArticles = articles
+            .filter(({ pubDate }) => isAfter(pubDate, oldPubDate))
+            .reverse();
+          console.log(`${newArticles.length} new articles, LOOP`);
+          state.feeds[index].pubDate = newPubDate;
+          state.feeds[index].articles = newArticles;
         })
         .finally(() => setTimeout(loop, timeout));
     };
@@ -70,16 +72,16 @@ const app = () => {
         state.errors.counter += 1;
         return;
       }
-      const doc = parse(value);
-      const pubDate = getPubDate(doc);
+      const data = parse(value);
       const url = state.inputValue;
-      state.feeds[url] = { pubDate };
       state.form = 'init';
       state.inputValue = '';
-      state.feeds[url].xml = doc;
-      state.currentUrl = url;
-      checkUpdate(url);
+      const feedIndex = state.feeds.push(data) - 1;
+      state.feeds[feedIndex].url = url;
+      state.feeds[feedIndex].index = feedIndex;
+      checkUpdate(url, feedIndex);
     };
+
     const url = `${corsProxy}${state.inputValue}`;
     axios.get(url, { timeout: 30000 })
       .then(({ data }) => changeState(data))
@@ -110,31 +112,33 @@ const app = () => {
 
   const feeds = document.querySelector('.feeds');
 
-  watch(state, 'currentUrl', () => {
-    const url = state.currentUrl;
-    const feed = createFeedItem(state.feeds[url].xml);
-    feed.setAttribute('data-url', url);
-    feeds.prepend(feed);
-  });
-
-  watch(state.updatedXml, (url) => {
-    if (url === 'root') return;
-    const { oldPubDate, xml } = state.updatedXml[url];
-    const items = getArticles(xml);
-    const articles = document.querySelector(`[data-url="${url}"]`).querySelector('.articles');
-    const index = items.findIndex(item => getPubDate(item) === oldPubDate);
-    const oldArticleIndex = index === -1 ? items.length : index;
-    console.log(oldArticleIndex, 'oldArticleIndex');
-    const newArticles = items.slice(0, oldArticleIndex);
+  watch(state, 'feeds', function cb(prop, action) {
+    if (action === 'set' && prop !== 'pubDate') {
+      return;
+    }
+    if (action === 'push') {
+      const feed = createFeedItem(state.feeds[prop]);
+      feeds.prepend(feed);
+      return;
+    }
+    const { index, articles: newArticles } = this;
+    console.log(`${newArticles.length} length <<<>>> ${format(new Date(), 'HH:mm:ss')} <<>> WATCHER`);
+    const reversedIndex = state.feeds.length - 1 - index;
+    console.log(
+      'index', index,
+      'reversed', reversedIndex,
+      'maxsize', state.feeds.length,
+    );
+    const articles = feeds.children[reversedIndex].querySelector('.articles');
+    fillList(articles, newArticles, 'prepend');
     newArticles.forEach(() => {
       articles.removeChild(articles.lastElementChild);
     });
-    console.log(url, '<<<>>>', oldPubDate, '<<<>>>', `length ${newArticles.length}`);
-    fillList(articles, newArticles.reverse(), 'prepend'); // Careful: reverse is destructive. It also changes the original array...
-  }, 1, true);
+  });
 
   watch(state, 'inputValue', () => {
-    if (isURL(state.inputValue) && !state.feeds[state.inputValue]) {
+    const url = state.inputValue;
+    if (isURL(url) && !state.feeds.some(feed => url === feed.url)) {
       button.disabled = false;
       input.setCustomValidity('');
     } else {
@@ -155,6 +159,7 @@ const app = () => {
   watch(state, 'form', () => {
     formStateActions[state.form]();
   });
+  // setInterval(testArticles, 5000);
 };
 
 app();
