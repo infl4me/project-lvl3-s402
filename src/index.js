@@ -138,7 +138,8 @@ const app = () => {
 
   watch(state, 'inputValue', () => {
     const url = state.inputValue;
-    if (isURL(url) && !state.feeds.some(feed => url === feed.url)) {
+    const doesUrlExist = state.feeds.some(feed => url === feed.url);
+    if (isURL(url) && !doesUrlExist) {
       button.disabled = false;
       input.setCustomValidity('');
     } else {
