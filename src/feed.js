@@ -9,8 +9,6 @@ const descBtnHandler = (event) => {
 };
 
 export const fillList = (articles, items, position = 'append') => {
-  console.log(items.length, 'ITEMS ADDED');
-  console.log('---------------------------------------------------------------------------------------------');
   items.forEach(({ title, link: href, description }) => {
     const article = document.createElement('li');
     article.classList.add('list-group-item', 'mb-2');
