@@ -1,10 +1,12 @@
+
 import 'bootstrap/dist/css/bootstrap.min.css';
 import WatchJS from 'melanke-watchjs';
 import isURL from 'validator/lib/isURL';
 import axios from 'axios';
-import { isAfter } from 'date-fns';
+import { format, isAfter } from 'date-fns';
 import parse from './xmlParser';
 import createFeedItem, { fillList } from './feed';
+import testArticles from './testArticles';
 
 const { watch } = WatchJS;
 const corsProxy = 'https://cors-anywhere.herokuapp.com/';
@@ -37,14 +39,21 @@ const app = () => {
     const loop = () => {
       axios.get(proxyUrl)
         .then((res) => {
+          console.log('---------------------------------------------------------------------------------------------');
+          console.log(url, '<<<>>>', format(new Date(), 'HH:mm:ss'));
           const { pubDate: newPubDate, articles } = parse(res.data);
           const oldPubDate = state.feeds[index].pubDate;
-          if (!isAfter(newPubDate, oldPubDate)) {
+          const hasNewArticles = isAfter(newPubDate, oldPubDate);
+          if (!hasNewArticles) {
+            console.log('NOT UPDATED!');
+            console.log('---------------------------------------------------------------------------------------------');
             return;
           }
+          console.log('UPDATED!');
           const newArticles = articles
             .filter(({ pubDate }) => isAfter(pubDate, oldPubDate))
             .reverse();
+          console.log(`${newArticles.length} new articles, LOOP`);
           state.feeds[index].pubDate = newPubDate;
           state.feeds[index].articles = newArticles;
         })
@@ -56,12 +65,12 @@ const app = () => {
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    state.loading = true;
+    state.form = 'loading';
 
     const changeState = (value, err) => {
-      state.loading = false;
       if (err) {
         state.errors.message = err;
+        state.form = 'process';
         state.errors.counter += 1;
         return;
       }
@@ -69,10 +78,11 @@ const app = () => {
       const url = state.inputValue;
       state.form = 'init';
       state.inputValue = '';
-      const feedIndex = state.feeds.push(data) - 1;
-      state.feeds[feedIndex].url = url;
-      state.feeds[feedIndex].index = feedIndex;
-      checkUpdate(url, feedIndex);
+      data.url = url;
+      const index = state.feeds.length;
+      data.index = index;
+      state.feeds.push(data);
+      checkUpdate(url, index);
     };
 
     const url = `${corsProxy}${state.inputValue}`;
@@ -92,36 +102,31 @@ const app = () => {
     }, 3000);
   });
 
-  watch(state, 'loading', () => {
-    if (state.loading) {
-      button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-      Loading...`;
-      button.disabled = true;
-    } else {
-      button.innerHTML = 'Submit';
-      button.disabled = false;
-    }
-  });
-
   const feeds = document.querySelector('.feeds');
 
-  watch(state, 'feeds', function cb(prop, action) {
-    if (action === 'set' && prop !== 'pubDate') {
-      return;
-    }
-    if (action === 'push') {
-      const feed = createFeedItem(state.feeds[prop]);
-      feeds.prepend(feed);
+  watch(state.feeds, () => {
+    const feed = createFeedItem(state.feeds[state.feeds.length - 1]);
+    feeds.prepend(feed);
+  }, 0);
+
+  watch(state.feeds, function cb(prop) {
+    if (prop !== 'pubDate') {
       return;
     }
     const { index, articles: newArticles } = this;
+    console.log(`${newArticles.length} length <<<>>> ${format(new Date(), 'HH:mm:ss')} <<>> WATCHER`);
     const reversedIndex = state.feeds.length - 1 - index;
+    console.log(
+      'index', index,
+      'reversed', reversedIndex,
+      'maxsize', state.feeds.length,
+    );
     const articles = feeds.children[reversedIndex].querySelector('.articles');
     fillList(articles, newArticles, 'prepend');
     newArticles.forEach(() => {
       articles.removeChild(articles.lastElementChild);
     });
-  });
+  }, 2, true);
 
   watch(state, 'inputValue', () => {
     const url = state.inputValue;
@@ -139,14 +144,24 @@ const app = () => {
     init: () => {
       form.classList.remove('was-validated');
       input.value = '';
+      button.innerHTML = 'Submit';
+      button.disabled = false;
     },
     process: () => {
       form.classList.add('was-validated');
+      button.innerHTML = 'Submit';
+      button.disabled = false;
+    },
+    loading: () => {
+      button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+      Loading...`;
+      button.disabled = true;
     },
   };
   watch(state, 'form', () => {
     formStateActions[state.form]();
   });
+  setInterval(testArticles, 5000);
 };
 
 app();
