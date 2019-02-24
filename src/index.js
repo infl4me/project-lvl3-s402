@@ -111,14 +111,24 @@ const app = () => {
     });
   });
 
+  const activateBtn = () => {
+    button.disabled = false;
+    button.innerHTML = 'Submit';
+  };
+  const disableBtn = (isLoading = false) => {
+    button.innerHTML = isLoading ? `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+    Loading...` : 'Submit';
+    button.disabled = true;
+  };
+
   watch(state, 'inputValue', () => {
     const url = state.inputValue;
     const doesUrlExist = state.feeds.some(feed => url === feed.url);
     if (isURL(url) && !doesUrlExist) {
-      button.disabled = false;
+      activateBtn();
       input.setCustomValidity('');
     } else {
-      button.disabled = true;
+      disableBtn();
       input.setCustomValidity('invalid');
     }
   });
@@ -127,18 +137,14 @@ const app = () => {
     init: () => {
       form.classList.remove('was-validated');
       input.value = '';
-      button.innerHTML = 'Submit';
-      button.disabled = false;
+      activateBtn();
     },
     process: () => {
       form.classList.add('was-validated');
-      button.innerHTML = 'Submit';
-      button.disabled = false;
+      activateBtn();
     },
     loading: () => {
-      button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-      Loading...`;
-      button.disabled = true;
+      disableBtn(true);
     },
   };
   watch(state, 'formState', () => {
