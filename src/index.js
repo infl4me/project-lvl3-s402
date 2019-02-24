@@ -28,47 +28,6 @@ const app = () => {
     state.inputValue = target.value;
   });
 
-  const activateBtn = () => {
-    button.disabled = false;
-    button.innerHTML = 'Submit';
-  };
-  const disableBtn = (isLoading = false) => {
-    button.innerHTML = isLoading ? `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-    Loading...` : 'Submit';
-    button.disabled = true;
-  };
-
-  watch(state, 'inputValue', () => {
-    const url = state.inputValue;
-    const doesUrlExist = state.feeds.some(feed => url === feed.url);
-    if (isURL(url) && !doesUrlExist) {
-      activateBtn();
-      input.setCustomValidity('');
-    } else {
-      disableBtn();
-      input.setCustomValidity('invalid');
-    }
-  });
-
-  const formStateActions = {
-    init: () => {
-      form.classList.remove('was-validated');
-      input.value = '';
-      activateBtn();
-    },
-    process: () => {
-      form.classList.add('was-validated');
-      activateBtn();
-    },
-    loading: () => {
-      disableBtn(true);
-    },
-  };
-
-  watch(state, 'formState', () => {
-    formStateActions[state.formState]();
-  });
-
   const checkUpdate = (url, index) => {
     const proxyUrl = `${corsProxy}${url}`;
 
@@ -121,6 +80,47 @@ const app = () => {
     axios.get(url, { timeout: 30000 })
       .then(({ data }) => changeState(data))
       .catch(({ message }) => changeState(null, `${message}`));
+  });
+
+  const activateBtn = () => {
+    button.disabled = false;
+    button.innerHTML = 'Submit';
+  };
+  const disableBtn = (isLoading = false) => {
+    button.innerHTML = isLoading ? `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+    Loading...` : 'Submit';
+    button.disabled = true;
+  };
+
+  watch(state, 'inputValue', () => {
+    const url = state.inputValue;
+    const doesUrlExist = state.feeds.some(feed => url === feed.url);
+    if (isURL(url) && !doesUrlExist) {
+      activateBtn();
+      input.setCustomValidity('');
+    } else {
+      disableBtn();
+      input.setCustomValidity('invalid');
+    }
+  });
+
+  const formStateActions = {
+    init: () => {
+      form.classList.remove('was-validated');
+      input.value = '';
+      activateBtn();
+    },
+    process: () => {
+      form.classList.add('was-validated');
+      activateBtn();
+    },
+    loading: () => {
+      disableBtn(true);
+    },
+  };
+
+  watch(state, 'formState', () => {
+    formStateActions[state.formState]();
   });
 
   watch(state, 'error', () => {
