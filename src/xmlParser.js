@@ -8,10 +8,11 @@ export default (data) => {
   const extract = nodes => (
     nodes.reduce((acc, node) => ({ ...acc, [node.nodeName]: node.textContent }), {})
   );
-  const channel = [...doc.querySelector('channel').childNodes];
-  const channelData = extract(channel.filter(node => node.nodeName !== 'item'));
-  const articles = channel
-    .filter(node => node.nodeName === 'item')
+  const channel = doc.querySelector('channel');
+  const channelData = extract(
+    [...channel.children].filter(node => node.nodeName !== 'item'),
+  );
+  const articles = [...doc.querySelectorAll('item')]
     .map(node => extract([...node.childNodes]));
   const { pubDate } = articles[0];
   return ({ ...channelData, pubDate, articles });
