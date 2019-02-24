@@ -2,7 +2,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import WatchJS from 'melanke-watchjs';
 import isURL from 'validator/lib/isURL';
 import axios from 'axios';
-import { format, isAfter } from 'date-fns';
+import { isAfter } from 'date-fns';
 import parse from './xmlParser';
 import createFeedItem, { fillList } from './feed';
 
@@ -34,21 +34,15 @@ const app = () => {
     const loop = () => {
       axios.get(proxyUrl)
         .then((res) => {
-          console.log('---------------------------------------------------------------------------------------------');
-          console.log(url, '<<<>>>', format(new Date(), 'HH:mm:ss'));
           const { pubDate: newPubDate, articles } = parse(res.data);
           const oldPubDate = state.feeds[index].pubDate;
           const hasNewArticles = isAfter(newPubDate, oldPubDate);
           if (!hasNewArticles) {
-            console.log('NOT UPDATED!');
-            console.log('---------------------------------------------------------------------------------------------');
             return;
           }
-          console.log('UPDATED!');
           const newArticles = articles
             .filter(({ pubDate }) => isAfter(pubDate, oldPubDate))
             .reverse();
-          console.log(`${newArticles.length} new articles, LOOP`);
           const newData = {
             pubDate: newPubDate, index, articles: newArticles, url,
           };
@@ -102,19 +96,14 @@ const app = () => {
   const feeds = document.querySelector('.feeds');
 
   watch(state.feeds, () => {
-    const feed = createFeedItem(state.feeds[state.feeds.length - 1]);
+    const lastIndex = state.feeds.length - 1;
+    const feed = createFeedItem(state.feeds[lastIndex]);
     feeds.prepend(feed);
   });
 
   watch(state, 'updatedFeedIndex', (_prop, _action, [index]) => {
-    const { articles: newArticles } = state.feeds[index];
-    console.log(`${newArticles.length} length <<<>>> ${format(new Date(), 'HH:mm:ss')} <<>> WATCHER`);
+    const newArticles = state.feeds[index].articles;
     const reversedIndex = state.feeds.length - 1 - index;
-    console.log(
-      'index', index,
-      'reversed', reversedIndex,
-      'maxsize', state.feeds.length,
-    );
     const articles = feeds.children[reversedIndex].querySelector('.articles');
     fillList(articles, newArticles, 'prepend');
     newArticles.forEach(() => {
