@@ -10,6 +10,7 @@ export default () => {
     const expected = Number(arr[arr.length - 2]);
     const values = [...feed.querySelectorAll('a')];
     const dates = values.map(v => v.textContent.split(' ')[2]);
+    // const mapped = dates.map(v => Date.parse(v));
     const isOk = dates.reduce((acc, v, i) => {
       // console.log(
       //   differenceInSeconds(v, dates[i + 1]), '<<diff',

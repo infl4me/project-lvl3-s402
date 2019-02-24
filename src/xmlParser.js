@@ -5,14 +5,14 @@ export default (data) => {
   if (doc.querySelector('parsererror')) {
     throw new Error('Parse ERROR');
   }
-  const channel = [...doc.querySelector('channel').childNodes];
   const extract = nodes => (
-    nodes
-      .map(v => ({ [v.nodeName]: v.textContent }))
-      .reduce((acc, v) => ({ ...acc, ...v }), {})
+    nodes.reduce((acc, node) => ({ ...acc, [node.nodeName]: node.textContent }), {})
   );
-  const feed = extract(channel.filter(v => v.nodeName !== 'item'));
-  const articles = channel.filter(v => v.nodeName === 'item').map(v => extract([...v.childNodes]));
+  const channel = [...doc.querySelector('channel').childNodes];
+  const channelData = extract(channel.filter(node => node.nodeName !== 'item'));
+  const articles = channel
+    .filter(node => node.nodeName === 'item')
+    .map(node => extract([...node.childNodes]));
   const { pubDate } = articles[0];
-  return ({ ...feed, pubDate, articles });
+  return ({ ...channelData, pubDate, articles });
 };

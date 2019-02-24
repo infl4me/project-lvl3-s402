@@ -1,4 +1,3 @@
-
 import 'bootstrap/dist/css/bootstrap.min.css';
 import WatchJS from 'melanke-watchjs';
 import isURL from 'validator/lib/isURL';
@@ -6,7 +5,6 @@ import axios from 'axios';
 import { format, isAfter } from 'date-fns';
 import parse from './xmlParser';
 import createFeedItem, { fillList } from './feed';
-// import testArticles from './testArticles';
 
 const { watch } = WatchJS;
 const corsProxy = 'https://cors-anywhere.herokuapp.com/';
@@ -15,12 +13,10 @@ const timeout = 5000;
 const app = () => {
   const state = {
     inputValue: '',
-    form: 'init',
+    formState: 'init',
     feeds: [],
-    errors: {
-      counter: 0,
-      message: '',
-    },
+    updatedFeedIndex: [],
+    error: [],
   };
 
   const form = document.querySelector('.needs-validation');
@@ -28,7 +24,7 @@ const app = () => {
   const button = document.querySelector('[type="submit"]');
 
   input.addEventListener('input', ({ target }) => {
-    state.form = target.value === '' ? 'init' : 'process';
+    state.formState = target.value === '' ? 'init' : 'process';
     state.inputValue = target.value;
   });
 
@@ -53,8 +49,11 @@ const app = () => {
             .filter(({ pubDate }) => isAfter(pubDate, oldPubDate))
             .reverse();
           console.log(`${newArticles.length} new articles, LOOP`);
-          state.feeds[index].pubDate = newPubDate;
-          state.feeds[index].articles = newArticles;
+          const newData = {
+            pubDate: newPubDate, index, articles: newArticles, url,
+          };
+          state.feeds[index] = newData;
+          state.updatedFeedIndex = [index];
         })
         .finally(() => setTimeout(loop, timeout));
     };
@@ -64,18 +63,17 @@ const app = () => {
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    state.form = 'loading';
+    state.formState = 'loading';
 
     const changeState = (value, err) => {
       if (err) {
-        state.errors.message = err;
-        state.form = 'process';
-        state.errors.counter += 1;
+        state.error = [err];
+        state.formState = 'process';
         return;
       }
       const data = parse(value);
       const url = state.inputValue;
-      state.form = 'init';
+      state.formState = 'init';
       state.inputValue = '';
       data.url = url;
       const index = state.feeds.length;
@@ -90,10 +88,10 @@ const app = () => {
       .catch(({ message }) => changeState(null, `${message}`));
   });
 
-  watch(state.errors, 'counter', () => {
+  watch(state, 'error', () => {
     const alert = document.querySelector('.alert-danger');
-    const { message } = state.errors;
-    alert.textContent = message;
+    const [error] = state.error;
+    alert.textContent = error;
     alert.classList.add('show');
     setTimeout(() => {
       alert.classList.remove('show');
@@ -106,13 +104,10 @@ const app = () => {
   watch(state.feeds, () => {
     const feed = createFeedItem(state.feeds[state.feeds.length - 1]);
     feeds.prepend(feed);
-  }, 0);
+  });
 
-  watch(state.feeds, function cb(prop) {
-    if (prop !== 'pubDate') {
-      return;
-    }
-    const { index, articles: newArticles } = this;
+  watch(state, 'updatedFeedIndex', (_prop, _action, [index]) => {
+    const { articles: newArticles } = state.feeds[index];
     console.log(`${newArticles.length} length <<<>>> ${format(new Date(), 'HH:mm:ss')} <<>> WATCHER`);
     const reversedIndex = state.feeds.length - 1 - index;
     console.log(
@@ -125,7 +120,7 @@ const app = () => {
     newArticles.forEach(() => {
       articles.removeChild(articles.lastElementChild);
     });
-  }, 2, true);
+  });
 
   watch(state, 'inputValue', () => {
     const url = state.inputValue;
@@ -157,10 +152,9 @@ const app = () => {
       button.disabled = true;
     },
   };
-  watch(state, 'form', () => {
-    formStateActions[state.form]();
+  watch(state, 'formState', () => {
+    formStateActions[state.formState]();
   });
-  // setInterval(testArticles, 5000);
 };
 
 app();
