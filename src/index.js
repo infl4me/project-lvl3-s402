@@ -5,7 +5,6 @@ import axios from 'axios';
 import { isAfter } from 'date-fns';
 import parse from './xmlParser';
 import createFeedItem, { fillList } from './feed';
-import check from './testArticles';
 
 const { watch } = WatchJS;
 const corsProxy = 'https://cors-anywhere.herokuapp.com/';
@@ -152,7 +151,6 @@ const app = () => {
       articles.removeChild(articles.lastElementChild);
     });
   });
-  setInterval(check, 5000);
 };
 
 app();
