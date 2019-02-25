@@ -3,4 +3,4 @@
 dist
 .tern-port
 assets
-src/testArticles.js
+testArticles.js
